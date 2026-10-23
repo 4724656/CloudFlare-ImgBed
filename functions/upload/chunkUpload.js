@@ -6,7 +6,7 @@ import { DiscordAPI } from '../utils/storage/discordAPI';
 import { CreateMultipartUploadCommand, UploadPartCommand, AbortMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { getDatabase, checkDatabaseConfig } from '../utils/databaseAdapter.js';
 import { fetchPageConfig } from '../utils/sysConfig.js';
-import { resolveFileType } from '../utils/mimeTypes.js';
+import { resolveFileType, getFileExtension, IMAGE_TYPES_BY_EXTENSION, getFileTypeCategory } from '../utils/mimeTypes.js';
 
 // 初始化分块上传
 export async function initializeChunkedUpload(context) {
@@ -23,6 +23,15 @@ export async function initializeChunkedUpload(context) {
 
         if (!originalFileName || !originalFileType || !totalChunks) {
             return createResponse('Error: Missing initialization parameters', { status: 400 });
+        }
+
+        // 安全校验：图床严格仅允许图片类型分块上传
+        const fileExt = getFileExtension(originalFileName);
+        if (!IMAGE_TYPES_BY_EXTENSION.has(fileExt) || getFileTypeCategory(originalFileType) !== 'image') {
+            return createResponse(JSON.stringify({ error: 'Only image files are allowed to be uploaded!' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         // 生成唯一的 uploadId

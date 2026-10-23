@@ -6,7 +6,7 @@ import {
     moderateContent, purgeCDNCache, isBlockedUploadIp, buildUniqueFileId, endUpload, getImageDimensions,
     sanitizeUploadFolder
 } from "./uploadTools";
-import { getFileTypeCategory, normalizeMimeType, resolveFileType } from "../utils/mimeTypes.js";
+import { getFileTypeCategory, normalizeMimeType, resolveFileType, getFileExtension, IMAGE_TYPES_BY_EXTENSION } from "../utils/mimeTypes.js";
 import { initializeChunkedUpload, handleChunkUpload, uploadLargeFileToTelegram, handleCleanupRequest } from "./chunkUpload";
 import { handleChunkMerge } from "./chunkMerge";
 import { TelegramAPI } from "../utils/storage/telegramAPI";
@@ -146,6 +146,15 @@ async function processFileUpload(context, formdata = null) {
     // 检查fileType和fileName是否存在
     if (fileType === null || fileType === undefined || fileName === null || fileName === undefined) {
         return createResponse('Error: fileType or fileName is wrong, check the integrity of this file!', { status: 400 });
+    }
+
+    // 安全校验：图床严格仅允许图片类型文件上传，禁止脚本、json、二进制可执行文件等非图片上传
+    const fileExt = getFileExtension(fileName);
+    if (!IMAGE_TYPES_BY_EXTENSION.has(fileExt) || getFileTypeCategory(fileType) !== 'image') {
+        return createResponse(JSON.stringify({ error: 'Only image files are allowed to be uploaded!' }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     // 提取图片尺寸

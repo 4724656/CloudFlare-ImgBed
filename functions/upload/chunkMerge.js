@@ -5,7 +5,7 @@ import { retryFailedChunks, cleanupFailedMultipartUploads, checkChunkUploadStatu
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { getDatabase } from '../utils/databaseAdapter.js';
 import { fetchPageConfig } from '../utils/sysConfig.js';
-import { resolveFileType } from '../utils/mimeTypes.js';
+import { resolveFileType, getFileExtension, IMAGE_TYPES_BY_EXTENSION, getFileTypeCategory } from '../utils/mimeTypes.js';
 
 // 处理分块合并
 export async function handleChunkMerge(context) {
@@ -42,6 +42,15 @@ export async function handleChunkMerge(context) {
         if (sessionInfo.originalFileName !== originalFileName ||
             sessionInfo.totalChunks !== totalChunks) {
             return createResponse('Error: Session parameters mismatch', { status: 400 });
+        }
+
+        // 安全校验：图床严格仅允许图片类型合并
+        const fileExt = getFileExtension(originalFileName);
+        if (!IMAGE_TYPES_BY_EXTENSION.has(fileExt) || getFileTypeCategory(originalFileType) !== 'image') {
+            return createResponse(JSON.stringify({ error: 'Only image files are allowed to be uploaded!' }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         // 检查会话是否过期
