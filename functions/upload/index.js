@@ -149,8 +149,8 @@ async function processFileUpload(context, formdata = null) {
     }
 
     // 安全校验：图床严格仅允许图片类型文件上传，禁止脚本、json、二进制可执行文件等非图片上传
-    const fileExt = getFileExtension(fileName);
-    if (!IMAGE_TYPES_BY_EXTENSION.has(fileExt) || getFileTypeCategory(fileType) !== 'image') {
+    const uploadExt = getFileExtension(fileName);
+    if (!IMAGE_TYPES_BY_EXTENSION.has(uploadExt) || getFileTypeCategory(fileType) !== 'image') {
         return createResponse(JSON.stringify({ error: 'Only image files are allowed to be uploaded!' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json' }
